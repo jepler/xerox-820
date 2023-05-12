@@ -1,0 +1,3 @@
+[submodule "zasm"]
+	path = host-src/zasm
+	url = https://github.com/Megatokio/zasm.git
