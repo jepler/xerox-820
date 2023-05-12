@@ -1,0 +1,46 @@
+; baud settings for the CBAUDx registers
+BAUD50      equ 00h
+BAUD75      equ 01h
+BAUD110     equ 02h
+BAUD134     equ 03h
+BAUD150     equ 04h
+BAUD300     equ 05h
+BAUD600     equ 06h
+BAUD1200    equ 07h
+BAUD1800    equ 08h
+BAUD2000    equ 09h
+BAUD2400    equ 0ah
+BAUD3600    equ 0bh
+BAUD4800    equ 0ch
+BAUD7200    equ 0dh
+BAUD9600    equ 0eh
+BAUD19200   equ 0fh
+
+; SIO A
+CBAUDA equ 00h
+CDATAA equ 04h
+CCTRLA equ 06h
+
+; SIO B
+CBAUDB equ 0ch
+CDATAB equ 05h
+CCTRLB equ 07h
+
+; General-purpose PIO
+GPIOAD equ 08h
+GPIOAC equ 09h
+GPIOBD equ 0ah
+GPIOBC equ 0bh
+
+; 1771 floppy controller
+DCSTCR equ 10h
+DCTRKR equ 11h
+DCSECR equ 12h
+DCDATR equ 13h
+
+; CRT scroll register
+CRTSCR equ 14h
+
+; CTC 18..1B
+
+; System PIO 1C..1F

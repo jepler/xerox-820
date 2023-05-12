@@ -1,3 +1,5 @@
+    include "xerox810.mac"
+
 ;======================================================
 ;        CP/M XMODEM 1.01 by Martin Eberhard 
 ;======================================================
@@ -928,18 +930,24 @@ RXBYT1:	mvi	e,2
 ; detects the difference between an 8080 and a Z80,
 ; and assumes an 8080 at 2 MHz, or a Z80 at 4 MHz.)		
 ;******************************************************
+MYRDR: 
+        in CCTRLB               ;(8?)
+        ani 1                   ;(4)
+        rz                      ;(11) (23)
+
+        in CDATAB
+        ret
+
 RXBYTE:	push	h
 
 ; set HL for 1/2 second timeout for either a 2 MHz
 ; 8080 or a 4MHz Z80
-MS500:	lxi	h,4274		;1/2-sec count down
-	sub	a		;test for 8080 or Z80
-	jpe	IS8080
-	dad	h		;Z80 is twice as fast
-IS8080:
+; x820 is a 2.5MHz Z80 but we aren't using the ROM routine so :thinking face:
 
-RXWAIT:	mvi	a,READER	;(7)BIOS call
-	call	GOBIOS		;(172+17=189)
+;;; this is a total guess based on 
+MS500:  lxi	h,20000
+
+RXWAIT:	call	MYRDR           ;(23)
 
 	stc			;(4)
 
@@ -950,11 +958,11 @@ RXWAIT:	mvi	a,READER	;(7)BIOS call
 	mov	a,h		;(5)Test for 16-bit 0
 	ora	l		;(4)
 	jnz	RXWAIT		;(10)
-		;inner loop:234 cycles=117 uS for 8080
-		;0.5 sec / 117 uS = 4273.5 cycles
+		;inner loop:61 cycles=24.4 uS for Z80@2.5MHz
+		;0.5 sec / 24.4uS ~= 20k loops
 
 	dcr	e
-	jnz	MS500		;spin for time
+	jnz	MS500	        ;spin for time
 
 ;timeout waiting for chr. Does the user want to abort?
 
@@ -1001,16 +1009,23 @@ TXACK:	mvi	a,ACK
 ;		mov	a,c
 ;		out	<my data port>
 ;******************************************************
-TXBYTE:	push	psw
-	push	b
+TXWAIT:
+                ret
 
-	mov	c,a		;data to c for BIOS
+TXBYTE:	push	psw
+
+	mov	c,a		;data to c
+        in CCTRLB
+        ani 4
+        rz
+
+        mov     a, c            ;data back to a
+        out CDATAB
 
 	mvi	a,PUNCH		;BIOS send c to punch
 	call	GOBIOS
 
 	mov	a,c		;original byte
-	pop	b
 	add	c		;update checksum
 	mov	c,a
 
@@ -1592,7 +1607,21 @@ OPTDON:
 ; If you replace the calls to RDR: and PUN: with
 ; direct access to your I/O ports, here is a good
 ; place to initialize your I/O port hardware.
+;
+; Initialize SIO B to 19200 baud 8N1
 ;------------------------------------------------
+        lda BAUD19200
+        out CBAUDB 
+
+        lda 4       ; N1
+        out CCTRLB
+        lda 2
+        out CCTRLB
+
+        lda 5       ; 8 data bits
+        out CCTRLB
+        lda 68h
+        out CCTRLB
 
 ;------------------------------------
 ; Did we get a direction? return with
