@@ -883,6 +883,15 @@ CCLR:
 	pop	b
 	ret
 
+MYRDR: 
+        in CCTRLB               ;(8?)
+        ani 1                   ;(4)
+        rz                      ;(11) (23)
+
+        in CDATAB
+        ret
+
+
 ;*****Subroutine***************************************
 ; Receive a byte, with 1-sec timeout
 ; On Entry:
@@ -930,14 +939,6 @@ RXBYT1:	mvi	e,2
 ; detects the difference between an 8080 and a Z80,
 ; and assumes an 8080 at 2 MHz, or a Z80 at 4 MHz.)		
 ;******************************************************
-MYRDR: 
-        in CCTRLB               ;(8?)
-        ani 1                   ;(4)
-        rz                      ;(11) (23)
-
-        in CDATAB
-        ret
-
 RXBYTE:	push	h
 
 ; set HL for 1/2 second timeout for either a 2 MHz
@@ -945,7 +946,9 @@ RXBYTE:	push	h
 ; x820 is a 2.5MHz Z80 but we aren't using the ROM routine so :thinking face:
 
 ;;; this is a total guess based on 
-MS500:  lxi	h,20000
+;MS500:  lxi	h,20000
+;;; make it faster during debugging
+MS500:  lxi	h,2000
 
 RXWAIT:	call	MYRDR           ;(23)
 
@@ -1009,26 +1012,22 @@ TXACK:	mvi	a,ACK
 ;		mov	a,c
 ;		out	<my data port>
 ;******************************************************
-TXWAIT:
-                ret
 
 TXBYTE:	push	psw
+        push    b
 
-	mov	c,a		;data to c
+	mov	b,a		;data to c
         in CCTRLB
         ani 4
         rz
 
-        mov     a, c            ;data back to a
+        mov     a,b             ;data back to a
         out CDATAB
 
-	mvi	a,PUNCH		;BIOS send c to punch
-	call	GOBIOS
-
-	mov	a,c		;original byte
 	add	c		;update checksum
 	mov	c,a
 
+        pop     b
 	pop	psw
 
 	ret
@@ -1264,7 +1263,7 @@ EXIT:	lda	CURDSK		;original default disk
 	mvi	d,COMBUF	;Reset CP/M DMA Address
 	mvi	c,BSTDMA
 
-	jmp	BDOS		;returns to CP/M
+	jmp	0               ; warm start
 
 ;******************************************************
 ;RAM Variables and Storage, all initialized during load
@@ -1610,17 +1609,22 @@ OPTDON:
 ;
 ; Initialize SIO B to 19200 baud 8N1
 ;------------------------------------------------
-        lda BAUD19200
+        mvi a,BAUD19200
         out CBAUDB 
 
-        lda 4       ; N1
+        mvi a,4       ; set register 4
         out CCTRLB
-        lda 2
+        mvi a,44h     ; 16x clock, 1 stop bit, no parity
         out CCTRLB
 
-        lda 5       ; 8 data bits
+        mvi a,5       ; set register 5
         out CCTRLB
-        lda 68h
+        mvi a,01101010b     ; TX 8 bits, TX-enable, RTS enable
+        out CCTRLB
+
+        mvi a,3       ; set register 3
+        out CCTRLB
+        mvi a,11000001b     ; RX 8 bits, RX enable
         out CCTRLB
 
 ;------------------------------------
