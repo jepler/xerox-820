@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # pipx foo.hex=inp:[beh]
 
 import sys
@@ -17,11 +18,15 @@ try:
         sent += len(line)
         if sent > buffer_size:
             s.flush()
+            time.sleep(1/30)
             s.write(b'\x13\r\n')
+            time.sleep(1/30)
             s.flush()
             time.sleep(wait_time)
             sent = len(line)
         s.write(line)
+        s.flush()
+        time.sleep(1/30)
 finally:
     s.write(b'\x13')
     time.sleep(wait_time)

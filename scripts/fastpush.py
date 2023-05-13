@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # pipx foo.hex=inp:[beh]
 
 import sys
