@@ -1,0 +1,178 @@
+; File XRXPDEF.MAC - Definitions for Xerox PROM monitor.
+; This file is included by XRXPL.MAC and XRXPH.MAC, the sources for
+;  the two 2716's on the Xerox 820 "Big board" computer.
+
+;
+; Xerox 820 ROM-based monitor version 2.0, Disassembled by K1BC
+;
+
+; Parameter assignments
+
+; Ram Allocation
+
+DEFBUF	EQU	0080H		; Default CPM Disk buffer area
+IOPAGE  EQU     0FFH            ; Page for I/O vectors (and RAM scratch)
+IOINTS  EQU     0FF00H          ; Address of above
+IV.CT0  EQU     010H            ; Base of 4 channels of CTC vectors
+IV.CLK  EQU     IV.CT0+1+1      ; Vector for event clock (CTC chan 1)
+IV.CTC  EQU     IV.CT0+3+3      ; Vector for CTC chan 3, 1-second ticks
+IV.KBD  EQU     01AH            ; Vector for keyboard
+NMIVEC	EQU	066H		; Where Z80 traps on Nnon-maskable interrupt
+NCMDBF  EQU     80              ; Size of command line buffer
+NRING   EQU     16              ; Size of TYI ring buffer, must be pwr of 2
+CRTPAG  EQU     30H             ; Where CRT RAM lives, in SHADOW!
+CRTRAM  EQU     3000H           ; ..
+
+; I/O ports
+
+BRG.A   EQU     000H            ; Baud rate generator for channel A
+SIO.AD  EQU     004H            ; SIO channel A, Data port
+SIO.BD  EQU     005H            ; SIO channel B, Data port
+SIO.AS  EQU     006H            ; SIO channel A, Status port
+SIO.BS  EQU     007H            ; SIO channel B, Status port
+PIO.AD  EQU     008H            ; PIO channel A, Data port
+PIO.AS  EQU     009H            ; PIO channel A, Sts/Ctrl port
+PIO.BD  EQU     00AH            ; PIO channel B, Data port
+PIO.BS  EQU     00BH            ; PIO channel B, Sts/Ctrl port
+BRG.B   EQU     00CH            ; Baud rate generator for channel B
+FDC.CS  EQU     010H            ; 1771 Floppy Disc Controller: Ctrl/Status
+FDC.CY  EQU     011H            ; 1771 Floppy Disc Controller: Cylinder/track
+FDC.SE  EQU     012H            ; 1771 Floppy Disc Controller: Sector
+FDC.DA  EQU     013H            ; 1771 Floppy Disc Controller: Data
+CRT.SC  EQU     014H            ; CRT Scroll control register
+CTC.C0  EQU     018H            ; Counter/Timer Chip Channel 0
+CTC.C1  EQU     019H            ; Counter/Timer Chip Channel 1
+CTC.C2  EQU     01AH            ; Counter/Timer Chip Channel 2
+CTC.C3  EQU     01BH            ; Counter/Timer Chip Channel 3
+PIO.SD  EQU     01CH            ; Data port of system PIO
+PIO.SC  EQU     01DH            ; Control port of system PIO
+PIO.KD  EQU     01EH            ; Keyboard data port of PIO
+PIO.KC	EQU     01FH            ; Keyboard control port of PIO
+
+; ASCII characters
+
+CH.EOT  EQU     004H            ; String terminator
+CH.BEL	EQU	007H		; Bell
+CH.BS   EQU     008H            ; Backspace
+CH.HT	EQU	009H		; Horizontal Tab
+CH.LF   EQU     00AH            ; Linefeed
+CH.FF   EQU     00CH            ; Formfeed
+CH.CR   EQU     00DH            ; Carriage return
+CH.CAN	EQU	018H		; Cancel, Control X
+CH.SUB	EQU	01AH		; SUB, Control Z
+CH.ESC	EQU	01BH		; Escape
+CH.CTL  EQU     020H            ; Control group less than this
+CH.SPC  EQU     020H            ; Space character
+
+; Shorthand
+
+ZERO    EQU     0               ; Explicit zero
+FF      EQU     0FFH            ; All ones byte
+
+; Misc params
+
+SECSIZ  EQU     0080H		; Size of a disk sector
+WHIRTM  EQU     15		; Seconds to let disk motor whir
+
+; Bit numbers for BIT, RES and SET instructions
+
+B0	EQU	0
+B1	EQU	1
+B2	EQU	2
+B3	EQU	3
+B4	EQU	4
+B5	EQU	5
+B6	EQU	6
+B7	EQU	7
+
+; Working storage in the top page of RAM
+
+; Macros to define the space
+
+DFB	MACRO	NAME,NUM
+NAME	EQU	..PC
+..PC	ASET	..PC+(NUM)
+	ENDM
+
+DFW	MACRO	NAME,NUM
+NAME	EQU	..PC
+..PC	ASET	..PC+2*(NUM)
+	ENDM
+
+; Here is the monitor's scratch RAM page. It also has the interrupt
+; vectors for the keyboard PIO and the CTC chip.
+
+..PC	ASET	0FF00H
+
+	DFB	SPAREV,16	; Space for other interrupt vectors
+
+; CTC interrupt vectors in next 8 bytes
+
+	DFB	CTCV,8		; FF10-FF17
+
+; Keyboard PIA vectors in following block
+
+	DFB	PIAV,8		; FF18-FF1F
+
+	DFB	KBRING,NRING	; Must be aligned on boundary of a multiple
+				;  of NRING, for pointer manipulation.
+				; Following pointers must be in same page
+				;  as the ring itself.
+	DFB	TYICT,1		; Number of chars in TYI ring buffer
+	DFB	KBPUTR,1	; Low byte of ring putter pointer
+	DFB	KBTAKR,1	; Low byte of ring taker pointer
+
+	DFB	SPARE1,2
+
+	DFW	SAVESP,1	; Space to hold stack ptr on interrupt
+
+..PC	ASET	..PC+32		; Space for interrupt stack
+
+INTSTK	EQU	..PC
+
+..PC	ASET	..PC+8
+
+; Do not separate the following 11 bytes, for initializer.
+	DFB	FDDRV,1		; Drive number
+	DFB	CYLVEC,7	; Vector of current cylinder for each drive
+	DFB	FDSTEP,1	; Step rate bits for 1771 in B0-B1
+	DFB	FDSSIZ,1	; Size of a sector, in bytes
+	DFB	FDRUNT,1	; Seconds to let floppy motor run
+; End of do not separate block
+
+	DFB	FDCYL,1		; Cylinder for current floppy op
+	DFB	FDSEC,1		; Sector for current floppy op
+	DFB	FDOP,1		; Opcode for current floppy op
+	DFB	RETRYC,1	; Retry count for read or write on floppy
+	DFW	FDDMA,1		; Memory pointer for current floppy rd/write
+	DFW	TODCLK,1	; Time counter for disk up to speed test
+	DFW	IDXTIM,1	; Time for disk to turn
+
+	DFW	CURSOR,1	; Pointer into screen RAM
+
+	DFB	CRSCHR,1	; Character under the cursor
+	DFB	SPCCRS,1	; Character to use as cursor if on space
+	DFB	SCROLL,1	; Current value of scroll register
+	DFB	SEQFLG,1	; Flag in midst of a sequence
+
+	DFW	TFF7A,1		; This seems to be a remnant ????
+
+	DFW	ARG1,1		; Command line arg values go here
+	DFW	ARG2,1
+	DFW	ARG3,1
+	DFW	ARG4,1
+
+	DFB	PAUSCH,1	; Char typed in during typeout
+
+	DFW	PRVADR,1	; Address of previous Dump command
+				; (Initially zero)
+
+	DFB	CMDBUF,1	; Command line typein buffer
+	DFB	CMDBF1,NCMDBF-1
+
+	DFB	UNUSED,22	; Unused area
+
+ZEND	EQU	..PC		; End of space cleared at startup
+
+; End of parameter file
+
