@@ -1,7 +1,15 @@
 .PHONY: default
-default:
-	rm -f XRXPL.LST XRXPL.REL XRXPH.LST XRXPH.REL XPRP.HEX
-	iz-cpm m80.com =XRXPL.MAC/L
-	iz-cpm m80.com =XRXPH.MAC/L
-	((echo '/P:0,XRXPL,XRXPH,XRXP/N/X/E'; echo Y) | timeout 5 iz-cpm l80.com)  || true
-	./z80eof.py XRXP.HEX
+defaut: xrxp_f000.hex
+
+xrxp.hex: xrxp.mac xrxpdef.mac
+	../../bin/zmac --oo hex,lst $<
+	cp zout/$@ $@
+
+xrxp.bin: xrxp.hex
+	objcopy -I ihex -O binary $< $@
+
+xrxp_f000.bin: xrxp.bin
+	dd bs=16 skip=1 if=$< of=$@
+
+xrxp_f000.hex: xrxp_f000.bin
+	objcopy --change-address=0xf000 -I binary -O ihex $< $@
