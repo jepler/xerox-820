@@ -5,6 +5,10 @@
 	.Z80			; Use Zilog format ops
 	INCLUDE	xrxpdef.mac	; Get the parameters
 
+SIO.CS equ SIO.BS
+SIO.CD equ SIO.BD
+BRG.C equ BRG.B
+
 ; This program is copied from ROM to RAM at power clear. There is an LDIR
 ; at the beginning of the ROM which moves this code, then jumps to
 ; location F000.
@@ -222,6 +226,20 @@ INIVIO:	DB	3
 	DB	1
 	DB	BRG.B           ; Set serial port baud rate
 	DB	5               ; 300 Baud for SIO channel B
+
+        ;; console channel -- might be A or B
+	DB	6
+	DB	SIO.CS          ; Channel C (might be A or B) of SIO
+	DB	004H, 044H      ; no parity, 1 stop bit
+	;DB	001H, 004H      ; (interrupts - channel B only)
+	DB	003H, 0C1H      ; RX 8 bits, RX-enable
+	DB	005H, 06AH      ; TX 8 bits, TX-enable, RTS-enable
+	;DB	002H, 000H      ; (interrupts - channel B only)
+
+	DB	1
+	DB	BRG.C           ; Set serial port baud rate
+	DB	0FH             ; 19200 Baud for SIO channel A
+
 
 	DB	FF              ; End of I/O initializer list
 
@@ -604,7 +622,20 @@ CHOUT2:	LD A,	(PAUSCH)        ; Anything typed in?
 
 ; See if anything has been typed in.
 
-CONST:	LD A,	(TYICT)		; Anything in ring buffer?
+CONST:
+        IN A, (SIO.CS)           ; character on Console SIO?
+        AND 1
+        JZ CONST1               ; NO - just check ring buffer
+
+        IN A, (SIO.CD)
+        PUSH HL                 ; CONST doesn't seem OK to clobber registers
+        PUSH BC
+        CALL KBINT1             ; YES - place on ring buffer
+        POP BC
+        POP HL
+
+CONST1:
+        LD A,	(TYICT)		; Anything in ring buffer?
 	OR	A		; ..
 	RET	Z		; Return Z if not
 	LD A,	FF		; Yes, return non-Z and A/ FF
@@ -738,6 +769,15 @@ CRTOUT:	PUSH	HL              ; Save user's registers
 	PUSH	DE
 	PUSH	BC
 	LD C,	A               ; Copy the character for a while
+
+SIOCW1:
+        IN A, (SIO.CS)          ; Wait for TX buffer space
+        AND 4
+        JR Z, SIOCW1
+
+        LD A, C                 ; Send it
+        OUT (SIO.CD),A
+
 	DI                      ; Turn off interrupts, since we are
 				; about to map out low memory
 	LD (SAVESP),SP		; And that lets us borrow the 
