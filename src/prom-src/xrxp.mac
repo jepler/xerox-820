@@ -5,8 +5,6 @@
 	.Z80			; Use Zilog format ops
 	INCLUDE	xrxpdef.mac	; Get the parameters
 
-AUTOBT	EQU	1
-
 ; This program is copied from ROM to RAM at power clear. There is an LDIR
 ; at the beginning of the ROM which moves this code, then jumps to
 ; location F000.
@@ -14,10 +12,14 @@ AUTOBT	EQU	1
 ; Here is the mover routine:
 
 	ASEG
+        IFDEF AS_COM
+	ORG	0100H
+        ELSE
 	ORG	0
+        ENDIF
 
 MOVER:	DI			; Interrupts off
-	LD HL,	00010H		; Where following code lives in ROM
+	LD HL,	MOVER+00010H	; Where following code lives (in ROM or COM-loader)
 	LD DE,	0F000H		; Where we want it in RAM
 	LD BC,	01000H		; How much we want to move (should be 0FF0)
 	LDIR			; Move that code
@@ -94,14 +96,14 @@ INIIOL:	LD B,	(HL)		; Get count of I/O setup data bytes
 IFIVE:	EI                      ; OK to turn on interrupts now
 	CALL	PSOUT		; Greet the morning
 	DB	CH.SUB          ; Clear the screen
-	DB	'...XEROX 820  VER. 2.0...'
+	DB	'...XEROX 820  VER. 2023..'
 	DB	CH.CR,CH.LF
 	DB	'   A - BOOT SYSTEM'
 	DB	CH.CR,CH.LF
 	DB	'   T - TYPEWRITER'
 	DB	CH.CR,CH.LF,CH.EOT
 
-	IF	AUTOBT
+	IFDEF   AUTOBT
 DLAY:
 	LD 	A,2
 	LD	(FDRUNT),A
@@ -1269,7 +1271,11 @@ IDXCHG:	LD A,	B               ; Aha. It changed.
         .DEPHASE
 
 	ASEG
+        IFDEF AS_COM
+	ORG	0900H
+        ELSE
 	ORG	0800H
+        ENDIF
 
         .PHASE	0F7F0H		; Runs here, lives at byte 0 of the
 				;  second EPROM, at 0800H in shadow
