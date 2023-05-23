@@ -5,9 +5,9 @@
 	.Z80			; Use Zilog format ops
 	INCLUDE	xrxpdef.mac	; Get the parameters
 
-SIO.CS equ SIO.BS
-SIO.CD equ SIO.BD
-BRG.C equ BRG.B
+SIO.CS equ SIO.AS
+SIO.CD equ SIO.AD
+BRG.C equ BRG.A
 
 ; This program is copied from ROM to RAM at power clear. There is an LDIR
 ; at the beginning of the ROM which moves this code, then jumps to
