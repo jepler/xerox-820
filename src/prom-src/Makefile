@@ -1,10 +1,22 @@
 .PHONY: default
-defaut: xrxp_f000.hex xrxp.com
+defaut: xrxp_f000.hex xrxp.com xrxpl.hex xrxph.hex
 
 xrxp.hex: xrxp.mac xrxpdef.mac
 	../../bin/zmac --oo hex,lst $<
 	cp zout/$@ $@
 
+xrxpl.bin: xrxp.bin
+	dd bs=2048 count=1 if=$< of=$@
+
+xrxph.bin: xrxp.bin
+	dd bs=2048 count=1 if=$< of=$@ seek=1
+
+xrxpl.hex: xrxpl.bin
+	objcopy -I binary -O ihex $< $@
+
+xrxph.hex: xrxph.bin
+	objcopy -I binary -O ihex $< $@
+	
 xrxp_com.hex: xrxp.mac xrxpdef.mac
 	../../bin/zmac --oo hex,lst --od zcom -DAS_COM $<
 	cp zcom/xrxp.hex $@
